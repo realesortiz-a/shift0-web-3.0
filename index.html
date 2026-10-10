@@ -1,0 +1,280 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHIFT0 2.0</title>
+<style>
+:root {
+  --bg:#07111f; --panel:#101e30; --text:#e8f4ff;
+  --muted:#9bb0c5; --cyan:#35e0cf; --line:#29445a;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:20px; color:var(--text);
+  background:radial-gradient(ellipse at top,#142e43,var(--bg) 65%);
+  font:16px/1.5 system-ui,sans-serif;
+}
+header { text-align:center; padding:22px 0; }
+h1 { color:var(--cyan); font-size:clamp(2.5rem,8vw,4rem); margin:0; }
+header p,.muted { color:var(--muted); }
+main { max-width:1100px; margin:auto; }
+.grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.card {
+  background:var(--panel); border:1px solid var(--line);
+  border-radius:18px; padding:20px; margin-bottom:18px;
+}
+h2 { margin-top:0; }
+h3 { color:var(--cyan); }
+textarea {
+  width:100%; min-height:135px; resize:vertical;
+  background:#071321; color:var(--text); border:1px solid var(--line);
+  border-radius:10px; padding:12px; font:inherit;
+}
+label { display:block; margin:12px 0 6px; font-weight:bold; }
+.buttons { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+button {
+  cursor:pointer; padding:10px 13px; border-radius:9px;
+  color:var(--text); background:#12343d; border:1px solid #34716f;
+  font:inherit; font-weight:bold;
+}
+button:hover { border-color:var(--cyan); }
+button.primary { background:var(--cyan); color:#05201f; }
+.status { color:var(--muted); min-height:24px; overflow-wrap:anywhere; }
+.notice {
+  border-left:3px solid var(--cyan); background:#0c2931;
+  padding:12px; border-radius:0 9px 9px 0;
+}
+.history-item {
+  padding:12px; border:1px solid var(--line); border-radius:10px;
+  margin:10px 0; overflow-wrap:anywhere;
+}
+.history-item pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+li { margin:8px 0; }
+@media(max-width:760px) {
+  .grid { grid-template-columns:1fr; }
+  body { padding:12px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>SHIFT0 <span style="color:white">2.0</span></h1>
+  <p>Tu laboratorio personal de cifrado 🔐</p>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2>📝 Codificar</h2>
+      <label for="original">Texto original</label>
+      <textarea id="original" placeholder="Escribe tu mensaje..."></textarea>
+      <div class="buttons">
+        <button class="primary" onclick="encode()">Codificar →</button>
+        <button onclick="pasteText('original')">Pegar</button>
+        <button onclick="copyText('original')">Copiar entrada</button>
+      </div>
+
+      <label for="encoded">Texto cifrado</label>
+      <textarea id="encoded" placeholder="Resultado cifrado..."></textarea>
+      <div class="buttons">
+        <button onclick="copyText('encoded')">Copiar resultado</button>
+        <button onclick="useForDecode()">Usar para descodificar ↗</button>
+      </div>
+      <div id="encodeStatus" class="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2>🔓 Descodificar</h2>
+      <label for="cipher">Texto cifrado</label>
+      <textarea id="cipher" placeholder="Pega aquí el código..."></textarea>
+      <div class="buttons">
+        <button class="primary" onclick="decode()">Descodificar →</button>
+        <button onclick="pasteText('cipher')">Pegar</button>
+        <button onclick="copyText('cipher')">Copiar entrada</button>
+      </div>
+
+      <label for="decoded">Texto descodificado</label>
+      <textarea id="decoded" placeholder="Mensaje recuperado..."></textarea>
+      <div class="buttons">
+        <button onclick="copyText('decoded')">Copiar resultado</button>
+        <button onclick="useAsOriginal()">Usar como texto original ↗</button>
+      </div>
+      <div id="decodeStatus" class="status" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>🕘 Historial de pruebas <span id="historyCount" class="muted">0</span></h2>
+    <p class="muted">Guarda las últimas conversiones mientras la página esté abierta.</p>
+    <div id="historyList" class="muted">Todavía no hay conversiones.</div>
+  </section>
+
+  <section class="card">
+    <h2>📘 Manual de SHIFT0 2.0</h2>
+    <h3>Cómo usar la página</h3>
+    <ol>
+      <li>Escribe un mensaje y pulsa <b>Codificar</b>.</li>
+      <li>Para descodificar, pega el código en la sección de descodificación y pulsa <b>Descodificar</b>.</li>
+      <li>Usa <b>Copiar</b> para copiar texto y <b>Pegar</b> para insertar lo que tengas en el portapapeles.</li>
+      <li>Pulsa <b>Usar para descodificar</b> para transferir el resultado cifrado al campo correspondiente.</li>
+      <li>El historial permite recuperar las conversiones anteriores de esta sesión.</li>
+    </ol>
+
+    <h3>Reglas conocidas</h3>
+    <ul>
+      <li>Las letras avanzan una posición en el alfabeto, con vuelta al inicio.</li>
+      <li>Después del desplazamiento, se toma la posición alfabética y se suma 3.</li>
+      <li>Mayúsculas y minúsculas usan formatos numéricos diferentes.</li>
+      <li>La Ñ es una letra propia, entre N y O.</li>
+      <li>Las vocales acentuadas llevan el prefijo 6. Ejemplo: Á = 600005.</li>
+      <li>Ü usa el prefijo 606. Ejemplo: Ü = 606000022.</li>
+      <li>Los espacios se representan con <code>|</code>.</li>
+      <li>Los dígitos se sustituyen directamente: 0→A, 1→B, 2→C, 3→D, 4→E, 5→F, 6→G, 7→H, 8→I, 9→J. Ejemplo: 2026→CACG.</li>
+      <li>Los símbolos usan el formato <code>80</code> + código asignado + <code>08</code>. Ejemplo: ! → 80108.</li>
+      <li>El punto, la coma y los dos puntos permanecen sin codificar.</li>
+    </ul>
+
+    <div class="notice">
+      <b>Nota:</b> el algoritmo definitivo debe tener todos los códigos y formatos especificados para que la codificación y descodificación sean fiables.
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const historyItems = [];
+const $ = id => document.getElementById(id);
+
+async function copyText(id) {
+  const text = $(id).value;
+  if (!text) return showStatus("encodeStatus", "No hay texto para copiar.");
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showStatus("encodeStatus", "¡Texto copiado!");
+  } catch {
+    showStatus("encodeStatus",
+      "No se pudo acceder al portapapeles. Selecciona el texto y cópialo manualmente.");
+  }
+}
+
+async function pasteText(id) {
+  try {
+    $(id).value = await navigator.clipboard.readText();
+    showStatus(id === "cipher" ? "decodeStatus" : "encodeStatus",
+      "¡Texto pegado!");
+  } catch {
+    showStatus(id === "cipher" ? "decodeStatus" : "encodeStatus",
+      "El navegador no permitió pegar automáticamente. Usa Ctrl+V en el campo.");
+    $(id).focus();
+  }
+}
+
+function showStatus(id, message) {
+  $(id).textContent = message;
+}
+
+function useForDecode() {
+  $("cipher").value = $("encoded").value;
+  $("decoded").value = "";
+  showStatus("decodeStatus", "Texto transferido. Pulsa Descodificar.");
+}
+
+function useAsOriginal() {
+  $("original").value = $("decoded").value;
+  $("encoded").value = "";
+  showStatus("encodeStatus", "Texto transferido. Pulsa Codificar.");
+}
+
+function saveHistory(mode, input, output) {
+  historyItems.unshift({
+    mode, input, output,
+    time: new Date().toLocaleTimeString()
+  });
+  if (historyItems.length > 30) historyItems.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  $("historyCount").textContent = historyItems.length;
+  const list = $("historyList");
+  list.replaceChildren();
+
+  if (!historyItems.length) {
+    list.textContent = "Todavía no hay conversiones.";
+    return;
+  }
+
+  historyItems.forEach(item => {
+    const box = document.createElement("article");
+    box.className = "history-item";
+
+    const title = document.createElement("b");
+    title.textContent = item.mode + " · " + item.time;
+
+    const input = document.createElement("pre");
+    input.textContent = "Entrada: " + item.input;
+
+    const output = document.createElement("pre");
+    output.textContent = "Resultado: " + item.output;
+
+    const restore = document.createElement("button");
+    restore.textContent = "Restaurar";
+    restore.onclick = () => {
+      if (item.mode === "Codificación") {
+        $("original").value = item.input;
+        $("encoded").value = item.output;
+      } else {
+        $("cipher").value = item.input;
+        $("decoded").value = item.output;
+      }
+      showStatus("encodeStatus", "Prueba restaurada.");
+    };
+
+    box.append(title, input, output, restore);
+    list.appendChild(box);
+  });
+}
+
+// Conectar estas funciones cuando las reglas definitivas estén cerradas.
+function encodeSHIFT0(text) {
+  throw new Error("Falta conectar el algoritmo definitivo de SHIFT0 2.0.");
+}
+
+function decodeSHIFT0(text) {
+  throw new Error("Falta conectar el algoritmo definitivo de SHIFT0 2.0.");
+}
+
+function encode() {
+  const input = $("original").value;
+  if (!input) return showStatus("encodeStatus", "Escribe un mensaje primero.");
+
+  try {
+    const output = encodeSHIFT0(input);
+    $("encoded").value = output;
+    saveHistory("Codificación", input, output);
+    showStatus("encodeStatus", "Codificación completada.");
+  } catch (error) {
+    showStatus("encodeStatus", error.message);
+  }
+}
+
+function decode() {
+  const input = $("cipher").value;
+  if (!input) return showStatus("decodeStatus", "Pega un código primero.");
+
+  try {
+    const output = decodeSHIFT0(input);
+    $("decoded").value = output;
+    saveHistory("Descodificación", input, output);
+    showStatus("decodeStatus", "Descodificación completada.");
+  } catch (error) {
+    showStatus("decodeStatus", error.message);
+  }
+}
+</script>
+</body>
+</html>
